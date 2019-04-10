@@ -1,0 +1,24 @@
+# IPset configuration - 10 June 2018
+# ===== Trusted OAM Clients  =====
+{% if hostfw_trusted_clients is defined and hostfw_trusted_clients is iterable %}
+create trusted_clients hash:net family inet hashsize 1024 maxelem 65536 counters
+{% for machine in hostfw_trusted_clients|unique %}
+add trusted_clients {{ machine.ip }} packets 0 bytes 0
+{% endfor %}
+{% endif %}
+# ====== Exposed Services ======
+{% if hostfw_exposed_services is defined and hostfw_exposed_services is iterable %}
+create exposed_services hash:ip,port,net family inet hashsize 1024 maxelem 65536 counters
+{% for service in hostfw_exposed_services|unique %}
+add exposed_services {{ service.ip }},{{ service.port }},{{ service.to }}  packets 0 bytes 0
+{% endfor %}
+{% endif %}
+# ===== Special IPsets =====
+{% if hostfw_special_ipsets is defined and hostfw_special_ipsets is iterable %}
+{% for ipset in hostfw_special_ipset %}
+{{ ipset.definition }}
+{% for entry in ipset.entries %}
+{{ entry }}
+{% endfor %}
+{% endfor %}
+{% endif %}

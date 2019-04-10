@@ -1,0 +1,51 @@
+---
+- name: "Stop and disable firewalld service"
+  service:
+    name: firewalld
+    state: stopped
+    enabled: no
+  tags: firewalld_off
+
+- name: "Check and install iptables and ipset packages and services"
+  yum:
+    name:
+      - iptables
+      - iptables-services
+      - ipset
+      - ipset-service
+    state: present
+
+- name: "Copy ipset file to remote machine"
+  template:
+    src: ipset-template.yml
+    dest: /etc/sysconfig/ipset
+    backup: yes
+    owner: root
+    group: root
+    mode: 0600
+  notify:
+    - "Reload and enable ipset service"
+
+- name: "Copy iptables rule file to remote machine"
+  template:
+    src: iptables-template.yml
+    dest: /etc/sysconfig/iptables
+    backup: yes    
+    owner: root
+    group: root
+    mode: 0600
+  notify:
+    -  "Reload and enable ipset service"
+    -  "Reload and enable iptables service"
+      
+- name: "Start and enable ipset service"
+  service:
+    name: ipset
+    enabled: yes
+    state: started
+
+- name: "Start and enable iptables service"
+  service: 
+    name: iptables
+    enabled: yes
+    state: started    

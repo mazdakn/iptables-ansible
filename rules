@@ -1,0 +1,66 @@
+# Init Iptables
+iptables -t filter -F
+iptables -t raw -F
+iptables -t nat -F
+iptables -t mangle -F
+
+iptables -P FORWARD DROP
+iptables -t mangle -P FORWARD DROP
+
+iptables -P INPUT ACCEPT # default accept with explicit deny and log
+iptables -P OUTPUT ACCEPT # defaukt accept with explicit deny and log
+
+ipset -F
+ipset -X
+
+ipset --exist create trusted_oam_clients hash:ip counters comment
+ipset flush trusted_oam_clients
+
+ipset --exist create security_machines hash:ip counters comment
+ipset flush security_machines
+
+ipset --exist create ingressTraffic hash:ip,port,ip counters comment 
+ipset flush ingress
+
+ipset --exist create egressTraffic hash:ip,port,ip counters comment
+ipset flush egressTraffic
+
+ipset --exist create banned_hosts hash:ip counters timeout 60
+ipset flush banned_hosts
+
+
+
+# INPUT chain
+
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A INPUT -m conntrack --ctstate INVALID -j DROP
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+iptables -A INPUT -p icmp -j ACCEPT
+iptables -A INPUT -p tcp --dport 22 -m set --match-set trusted_oam_clients src -m conntrack --ctstate NEW -j ACCEPT
+iptables -A INPUT -m set --match-set security_machines src -m conntrack --ctstate NEW -j ACCEPT
+
+iptables -A INPUT -m set --match-set banned_hosts src -j DROP
+iptables -A INPUT -m set --match-set services dst,dst,src -m conntrack --ctstate new -j ACCEPT
+
+#iptables -A INPUT -j SET --add-set banned_hosts src
+
+iptables -A INPUT -m recent --update --name tracked_hosts --rsource --seconds 180 --hitcount 5 -j SET --add-set banned_hosts src
+iptables -A INPUT -m recent --set --name tracked_hosts --rsource 
+iptables -A INPUT -j LOG --log-prefix=iptables/InputDropAll:
+iptables -A INPUT -j DROP # or REJECT??
+
+
+# OUTPUT Chain
+
+iptables -A OUTPUT -o lo -j ACCEPT
+iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -m set --match-set egressTraffic dst,dst,src -m conntrack --ctstate new -j ACCEPT
+iptables -A OUTPUT -j LOG --log-prefix=iptables/OutputDropAll:
+iptables -A OUTPUT -j DROP # or REJECT??
+
+
+TODO:
+1 - banned_host after or before conntrack ESTABLISHED?
+3 - OUTPUT chain?
+
+

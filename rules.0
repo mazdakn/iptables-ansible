@@ -1,0 +1,47 @@
+# Init iptables
+iptables -t filter -F
+iptables -t raw -F
+iptables -t nat -F
+iptables -t mangle -F
+
+iptables -P FORWARD DROP
+iptables -P INPUT ACCEPT
+iptables -P OUTPUT ACCEPT
+
+
+# Creating and initializing IPSets
+ipset -F
+ipset -X
+
+ipset --exist create trusted_oam_clients hash:ip counters comment
+ipset flush trusted_oam_clients
+ipset add trusted_oam_clients x.x.x.x --comment 'jumphost'
+ipset add trusted_oam_clients y.y.y.y --comment 'Ansible'
+
+ipset --exist create security_machines hash:ip counters comment
+ipset flush security_machines
+ipset add security_machines z.z.z.z --comment 'Security machine'
+
+
+# INPUT chain
+
+# Generic rules
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A INPUT -s 127.0.0.0/8 -j DROP
+iptables -A INPUT -m conntrack --ctstate INVALID -j DROP
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+iptables -A INPUT -p icmp -j ACCEPT
+
+# Specific rules
+iptables -A INPUT -m set --match-set security_machines src -m conntrack --ctstate NEW -j ACCEPT
+iptables -A INPUT -p tcp --dport 22 -m set --match-set trusted_oam_clients src -m conntrack --ctstate NEW -j ACCEPT
+iptables -A INPUT -p tcp --dport 22 -j LOG --log-prefix=iptables/DropSSH:
+iptables -A INPUT -j LOG --log-prefix=iptables/InputDropAll:
+
+
+# OUTPUT chain
+
+iptables -A OUTPUT -o lo -j ACCEPT
+iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -j LOG --log-prefix=iptables/OutputDropAll:
+

@@ -1,0 +1,5 @@
+hostfw_enforce: False
+hostfw_log: False    
+
+hostfw_trusted_clients:
+    - { name: 'Ansible machine',  ip: '10.0.0.1' }

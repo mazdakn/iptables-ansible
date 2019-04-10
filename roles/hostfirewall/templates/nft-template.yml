@@ -1,0 +1,40 @@
+flush ruleset
+table inet filter {
+	set trusted_oam { 
+		type ipv4_addr
+		elements = { 10.0.0.1}
+	}
+
+	set tcp_services {
+		type ipv4_addr . inet_service . ipv4_addr
+		elements = { 10.0.0.100 . http . 10.0.0.1}
+	}
+
+	set udp_services {
+		type ipv4_addr . inet_service . ipv4_addr
+		elements = { 10.0.0.100 . 9000 . 10.0.0.1}
+	}
+
+	chain input {
+		type filter hook input priority -10; policy accept;
+		ct state established,related accept 
+		ct state invalid counter packets 0 bytes 0 drop 
+		iif lo accept 
+		ip saddr 127.0.0.0/8 counter packets 0 bytes 0 drop 
+		ip protocol icmp accept 
+		ct state new jump new_sessions 
+		drop 
+	}
+
+	chain forward {
+		type filter hook forward priority -10; policy drop;
+	}
+
+	chain new_sessions {
+		tcp dport ssh ip saddr @trusted_oam accept 
+		ip protocol tcp ip daddr . tcp dport . ip saddr @tcp_services accept
+		ip protocol udp ip daddr . udp dport . ip saddr @udp_services accept
+		counter packets 0 bytes 0 log prefix "ExplicitDrop: "
+		return 
+	}
+}

@@ -1,0 +1,56 @@
+# iptables rules - 10 June 2018
+# ===== Mangle table =====
+*mangle
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+COMMIT
+# ===== NAT table =====
+*nat
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+COMMIT
+# ===== RAW tables =====
+*raw
+:PREROUTING ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+COMMIT
+# ===== Filter tables =====
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0:0]
+# ----- Generic Rules ----- 
+-A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A INPUT -m conntrack --ctstate INVALID -j DROP
+-A INPUT -i lo -j ACCEPT
+-A INPUT -s 127.0.0.0/8 -j DROP
+-A INPUT -p icmp -j ACCEPT
+# ----- Trusted Clients Rules -----
+{% if hostfw_trusted_clients is defined and hostfw_trusted_clients is iterable %}
+-A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW -m set --match-set trusted_clients src -j ACCEPT
+{% endif %}
+# ----- Exposed TCP/UDP Services -----
+{% if hostfw_exposed_services is defined and hostfw_exposed_services is iterable %}
+-A INPUT -m conntrack --ctstate NEW -m set --match-set exposed_services dst,dst,src -j ACCEPT
+{% endif %}
+# ----- Special Rules -----
+{% if hostfw_special_rules is defined and hostfw_special_rules is iterable %}
+{% for rule in hostfw_special_rules %}
+{{ rule }}
+{% endfor %}
+{% endif %}
+# ----- Logging -----
+{% if hostfw_log is defined  and hostfw_log|upper == 'TRUE' %}
+-A INPUT -m conntrack --ctstate NEW -j LOG --log-prefix "iptablesDrop: "
+{% endif %}
+# ----- Default -----
+{% if hostfw_enforce is defined and hostfw_enforce|upper == 'TRUE' %}
+-A INPUT -j DROP
+{% endif %}
+COMMIT
+# ===== End of rules =====

@@ -1,0 +1,14 @@
+# TODO: enable/disable microsegmentation functionality
+#hostfw_activate: True
+hostfw_exposed_services:
+    - { name: 'netcat', ip: '10.0.0.1', port: 'udp:9000', to: '10.0.0.0/24' }
+    - { name: 'www',    ip: '10.0.0.1', port: '80'      , to: '10.0.0.0/24' }
+
+#hostfw_special_ipsets:
+#    - name: Some IPset
+#      definition: 'create special_ipset hash:ip family inet hashsize 1024 maxelem 65536 counters'
+#      entries:
+#        - 'add special_ipset 10.0.0.227 packets 0 bytes 0'
+#
+#hostfw_special_rules:
+#    - '-A INPUT -p tcp -m tcp --dport 22 -m conntrack --ctstate NEW -j LOG --log-prefix "iptables:inputSSH: "'

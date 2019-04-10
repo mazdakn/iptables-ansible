@@ -1,0 +1,12 @@
+---
+- name: "Reload and enable ipset service"
+  service:
+    name: ipset
+    state: reloaded    
+    enabled: yes
+
+- name: "Reload and enable iptables service"
+  service:
+    name: iptables
+    state: reloaded
+    enabled: yes    
